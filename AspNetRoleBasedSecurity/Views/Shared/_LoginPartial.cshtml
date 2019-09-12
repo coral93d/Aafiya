@@ -1,0 +1,193 @@
+﻿
+@if (User.IsInRole("Admin"))
+{
+<span class="noti glyphicon glyphicon-bell"><span class="count"> </span></span>
+<div class="noti-content">
+    <div class="noti-top-arrow"></div>
+    <ul id="notiContent"></ul>
+</div>
+}
+
+@using Microsoft.AspNet.Identity
+
+            @if (Request.IsAuthenticated)
+
+            {
+
+                using (Html.BeginForm("LogOff", "Account", FormMethod.Post, new { id = "logoutForm", @class = "navbar-right" }))
+
+                {
+
+                    @Html.AntiForgeryToken()
+
+                    <ul class="nav navbar-nav navbar-right">
+
+                        <li>
+
+                            @Html.ActionLink("" + User.Identity.GetUserName() + "", "MasterDetail", "Profile", routeValues: null, htmlAttributes: new { title = "Manage" })
+
+                        </li>
+
+                        <li><a href="javascript:document.getElementById('logoutForm').submit()">Log off</a></li>
+
+                    </ul>
+
+
+
+                }
+
+            }
+
+            else
+
+            {
+
+                <ul class="nav navbar-nav navbar-right">
+
+
+
+                    <li><a href="@Url.Action("Index", "Account")" class="fa fa-user-secret"> Admin</a></li>
+
+
+                    <li>@Html.ActionLink("Log in", "Login", "Account", routeValues: null, htmlAttributes: new { id = "loginLink", @class = "fa fa-key" })</li>
+
+
+                    
+                </ul>
+             
+
+            }
+           
+
+            <style type="text/css">
+                /*Added css for design notification area, you can design by your self*/
+                /* COPY css content from youtube video description*/
+                .noti-content {
+                    position: fixed;
+                    right: 200px;
+                    background: #e5e5e5;
+                    border-radius: 4px;
+                    top: 47px;
+                    width: 350px;
+                    display: none;
+                    border: 1px solid #9E988B;
+                }
+
+                ul#notiContent {
+                    max-height: 200px;
+                    overflow: auto;
+                    padding: 0px;
+                    margin: 0px;
+                    padding-left: 20px;
+                }
+
+                    ul#notiContent li {
+                        margin: 3px;
+                        padding: 6px;
+                        background: #fff;
+                    }
+
+                .noti-top-arrow {
+                    border-color: transparent;
+                    border-bottom-color: #F5DEB3;
+                    border-style: dashed dashed solid;
+                    border-width: 0 8.5px 8.5px;
+                    position: absolute;
+                    right: 45px;
+                    top: -8px;
+                }
+
+                span.noti {
+                    color: #FF2323;
+                    margin: 15px;
+                    position: fixed;
+                    right: 230px;
+                    font-size: 18px;
+                    cursor: pointer;
+                }
+
+                span.count {
+                    position: relative;
+                    top: -3px;
+                    /*color:white;*/
+                }
+                /*.noti:hover {
+                             color:white;
+                         }*/
+            </style>
+
+      
+            <script src="~/Scripts/jquery-1.10.2.min.js"></script>
+            <script src="~/Scripts/jquery.signalR-2.4.1.min.js"></script>
+            <script src="/signalr/hubs"></script>
+
+            @* Add jquery code for Get Notification & setup signalr *@
+            <script type="text/javascript">
+
+
+        // Click on notification icon for show notification
+        $('span.noti').click(function (e) {
+
+            e.stopPropagation();
+            $('span.noti').css("color", "lightgreen");
+            $('span.count').hide();
+            $('.noti-content').show();
+            var count = 0;
+            count = parseInt($('span.count').html()) || 0;
+            count++;
+            // only load notification if not already loaded
+            if (count > 0) {
+                updateNotification();
+            }
+            $('span.count', this).html('&nbsp;');
+        })
+        // hide notifications
+        $('html').click(function () {
+            $('.noti-content').hide();
+        })
+        // update notification
+        function updateNotification() {
+            $('#notiContent').empty();
+            $('#notiContent').append($('<li>Loading...</li>'));
+            $.ajax({
+                type: 'GET',
+                url: '/home/GetNotifications',
+                success: function (response) {
+
+                    $('#notiContent').empty();
+                    if (response.length == 0) {
+                        $('#notiContent').append($('<li>Currently You Have No New Notifications.</li>'));
+                    }
+                    $.each(response, function (index, value) {
+                        $('#notiContent').append($('<li> '+value.User_name + ' ' + 'has posted infraction titled: '+ '"' + value.Title + '"'+ ' to' + ' (' + value.Tags + ') </li>'));
+                    });
+                },
+                error: function (error) {
+                    console.log(error);
+                }
+            })
+        }
+        // update notification count
+        function updateNotificationCount() {
+           
+            var count = 0;
+            count = parseInt($('span.count').html()) || 0;
+            count++;
+            $('span.noti').css("color", "blue");
+            $('span.count').css({ "background-color": "white", "color": "red" });
+            $('span.count').html(count);
+
+        }
+        // signalr js code for start hub and send receive notification
+        var notificationHub = $.connection.notificationHub;
+        $.connection.hub.start().done(function () {
+            console.log('Notification hub started');
+        });
+        //signalr method for push server message to client
+        notificationHub.client.notify = function (message) {
+            if (message && message.toLowerCase() == "added") {
+                updateNotificationCount();
+            }
+        }
+
+            </script>
